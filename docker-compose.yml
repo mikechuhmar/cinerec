@@ -1,0 +1,16 @@
+# Optional convenience for local development of the PostgreSQL + pgvector database.
+# The Cursor Cloud VM uses a natively-installed PostgreSQL instead (see AGENTS.md).
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: cinerec
+      POSTGRES_PASSWORD: cinerec
+      POSTGRES_DB: cinerec
+    ports:
+      - "5432:5432"
+    volumes:
+      - cinerec_pgdata:/var/lib/postgresql/data
+
+volumes:
+  cinerec_pgdata:
