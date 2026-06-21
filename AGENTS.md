@@ -40,8 +40,23 @@ by the update script and is needed to actually run the app.
   retrain on the next request.
 - Tests require a running PostgreSQL and create/use a separate `cinerec_test` database
   automatically (see `tests/conftest.py`).
+- Schema changes use additive, idempotent migrations (`scripts.migrate`, `ADD COLUMN IF NOT
+  EXISTS`) rather than a migration framework. After pulling changes that add columns, run
+  `uv run python -m scripts.migrate` against an already-populated DB (fresh `load_data` already
+  includes them via the ORM).
+- Recommendation responses are cached in-process with a short TTL (`app/recsys/cache.py`); the
+  cache is cleared by `collaborative.invalidate()` (called on `POST /ratings`). It is per-process,
+  so it resets on server restart.
+- `scripts.evaluate` reports leave-one-out HR@K / NDCG@K and is the way to compare
+  content / collaborative / hybrid quality; it reads embeddings from the DB, so run
+  `build_embeddings` first.
 
 ### Frontend
 
 - The Vite dev server proxies `/api/*` → `http://localhost:8000`, so the backend must be running
-  on port 8000 for the UI to load data.
+  on port 8000 for the UI to load data. If the catalog shows "0 movies" and the console logs
+  `Unexpected token '<' ... is not valid JSON`, the dev server/proxy is down — restart
+  `npm run dev` (the proxy only forwards `/api` while Vite is running).
+- Avoid running `npm run build` in `frontend/` while `npm run dev` is live in the same directory;
+  the build (`tsc -b` + `vite build`) can disrupt the running dev server. Use separate sessions
+  or stop the dev server first.

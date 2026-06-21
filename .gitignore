@@ -18,6 +18,7 @@ backend/data/
 node_modules/
 frontend/dist/
 frontend/.vite/
+*.tsbuildinfo
 
 # Misc
 .DS_Store

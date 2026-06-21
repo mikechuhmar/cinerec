@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import threading
 
+import numpy as np
 import scipy.sparse as sp
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -77,6 +78,10 @@ def invalidate() -> None:
     global _model_state
     with _lock:
         _model_state = None
+    # New feedback also invalidates any cached recommendation responses.
+    from app.recsys import cache
+
+    cache.clear()
 
 
 def recommend_for_user(
@@ -87,15 +92,29 @@ def recommend_for_user(
         return []
 
     uidx = state.user_index[user_id]
+    # implicit pads the result with filler items when N exceeds the number of
+    # recommendable items; cap N so we never request more than are available.
+    liked = state.user_items[uidx].nnz
+    n = min(limit, max(0, len(state.index_item) - liked))
+    if n == 0:
+        return []
+
     ids, scores = state.model.recommend(
-        uidx, state.user_items[uidx], N=limit, filter_already_liked_items=True
+        uidx, state.user_items[uidx], N=n, filter_already_liked_items=True
     )
     movie_ids = [state.index_item[i] for i in ids]
     movies = {m.id: m for m in db.execute(select(Movie).where(Movie.id.in_(movie_ids))).scalars()}
     out: list[tuple[Movie, float]] = []
+    seen: set[int] = set()
     for i, score in zip(ids, scores, strict=True):
-        movie = movies.get(state.index_item[i])
+        if not np.isfinite(score):
+            continue
+        mid = state.index_item[i]
+        if mid in seen:
+            continue
+        movie = movies.get(mid)
         if movie is not None:
+            seen.add(mid)
             out.append((movie, float(score)))
     return out
 
@@ -106,15 +125,20 @@ def similar_items(db: Session, movie_id: int, limit: int = 10) -> list[tuple[Mov
         return []
 
     iidx = state.item_index[movie_id]
-    ids, scores = state.model.similar_items(iidx, N=limit + 1)
+    n = min(limit + 1, len(state.index_item))
+    ids, scores = state.model.similar_items(iidx, N=n)
     movie_ids = [state.index_item[i] for i in ids]
     movies = {m.id: m for m in db.execute(select(Movie).where(Movie.id.in_(movie_ids))).scalars()}
     out: list[tuple[Movie, float]] = []
+    seen: set[int] = set()
     for i, score in zip(ids, scores, strict=True):
+        if not np.isfinite(score):
+            continue
         mid = state.index_item[i]
-        if mid == movie_id:
+        if mid == movie_id or mid in seen:
             continue
         movie = movies.get(mid)
         if movie is not None:
+            seen.add(mid)
             out.append((movie, float(score)))
     return out[:limit]
