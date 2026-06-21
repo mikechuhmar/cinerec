@@ -40,6 +40,16 @@ by the update script and is needed to actually run the app.
   retrain on the next request.
 - Tests require a running PostgreSQL and create/use a separate `cinerec_test` database
   automatically (see `tests/conftest.py`).
+- Schema changes use additive, idempotent migrations (`scripts.migrate`, `ADD COLUMN IF NOT
+  EXISTS`) rather than a migration framework. After pulling changes that add columns, run
+  `uv run python -m scripts.migrate` against an already-populated DB (fresh `load_data` already
+  includes them via the ORM).
+- Recommendation responses are cached in-process with a short TTL (`app/recsys/cache.py`); the
+  cache is cleared by `collaborative.invalidate()` (called on `POST /ratings`). It is per-process,
+  so it resets on server restart.
+- `scripts.evaluate` reports leave-one-out HR@K / NDCG@K and is the way to compare
+  content / collaborative / hybrid quality; it reads embeddings from the DB, so run
+  `build_embeddings` first.
 
 ### Frontend
 
