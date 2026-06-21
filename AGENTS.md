@@ -54,4 +54,9 @@ by the update script and is needed to actually run the app.
 ### Frontend
 
 - The Vite dev server proxies `/api/*` → `http://localhost:8000`, so the backend must be running
-  on port 8000 for the UI to load data.
+  on port 8000 for the UI to load data. If the catalog shows "0 movies" and the console logs
+  `Unexpected token '<' ... is not valid JSON`, the dev server/proxy is down — restart
+  `npm run dev` (the proxy only forwards `/api` while Vite is running).
+- Avoid running `npm run build` in `frontend/` while `npm run dev` is live in the same directory;
+  the build (`tsc -b` + `vite build`) can disrupt the running dev server. Use separate sessions
+  or stop the dev server first.
