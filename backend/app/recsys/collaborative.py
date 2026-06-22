@@ -1,12 +1,19 @@
 """Collaborative filtering via implicit ALS, trained from the ratings table.
 
-The model is trained lazily and cached in-memory. Call ``invalidate()`` after
-ingesting new ratings to force a retrain on the next request.
+The fitted model is cached in-memory and refreshed by a background worker thread so that
+requests never block on training:
+
+* ``invalidate()`` (called on new ratings) marks the model dirty and signals the worker,
+  while the current model keeps serving requests (eventual consistency).
+* ``start_retrainer()`` / ``stop_retrainer()`` manage the worker lifecycle (wired into the
+  FastAPI lifespan). When background retraining is disabled (e.g. in tests), ``invalidate()``
+  resets the model so the next request retrains synchronously, keeping behaviour deterministic.
 """
 
 from __future__ import annotations
 
 import threading
+import time
 
 import numpy as np
 import scipy.sparse as sp
@@ -16,9 +23,6 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.models import Movie, Rating
 
-_lock = threading.Lock()
-_model_state: _ALSState | None = None
-
 
 class _ALSState:
     def __init__(self) -> None:
@@ -27,6 +31,14 @@ class _ALSState:
         self.user_index: dict[int, int] = {}
         self.item_index: dict[int, int] = {}
         self.index_item: list[int] = []
+
+
+_lock = threading.Lock()
+_model_state: _ALSState | None = None
+_dirty = threading.Event()
+_stop = threading.Event()
+_thread: threading.Thread | None = None
+_last_trained_at: float | None = None
 
 
 def _train(db: Session) -> _ALSState:
@@ -67,21 +79,108 @@ def _train(db: Session) -> _ALSState:
 
 
 def get_state(db: Session) -> _ALSState:
-    global _model_state
+    """Return the cached model, training synchronously if none exists yet."""
+    global _model_state, _last_trained_at
+    if _model_state is not None:
+        return _model_state
     with _lock:
         if _model_state is None:
             _model_state = _train(db)
+            _last_trained_at = time.time()
         return _model_state
 
 
-def invalidate() -> None:
-    global _model_state
+def _set_state(state: _ALSState) -> None:
+    global _model_state, _last_trained_at
+    with _lock:
+        _model_state = state
+        _last_trained_at = time.time()
+
+
+def reset() -> None:
+    """Hard reset: drop the model so the next request retrains synchronously."""
+    global _model_state, _last_trained_at
     with _lock:
         _model_state = None
-    # New feedback also invalidates any cached recommendation responses.
+        _last_trained_at = None
+    _dirty.clear()
     from app.recsys import cache
 
     cache.clear()
+
+
+def invalidate() -> None:
+    """Mark the model stale after new ratings and clear the recommendation cache."""
+    from app.recsys import cache
+
+    cache.clear()
+    if get_settings().enable_background_retrain:
+        # Keep serving the current model; the worker rebuilds off the request path.
+        _dirty.set()
+    else:
+        reset()
+
+
+def _retrain_once() -> None:
+    from app.db import SessionLocal
+
+    with SessionLocal() as db:
+        new_state = _train(db)
+    _set_state(new_state)
+
+
+def _retrain_loop() -> None:
+    interval = get_settings().retrain_interval_seconds
+    if _model_state is None:
+        try:
+            _retrain_once()
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"[retrain] initial training failed: {exc}")
+
+    while not _stop.is_set():
+        triggered = _dirty.wait(timeout=interval)
+        if _stop.is_set():
+            break
+        if triggered or _model_state is None:
+            _dirty.clear()
+            try:
+                _retrain_once()
+            except Exception as exc:  # pragma: no cover - defensive
+                print(f"[retrain] training failed: {exc}")
+
+
+def start_retrainer() -> None:
+    global _thread
+    if not get_settings().enable_background_retrain:
+        return
+    if _thread is not None and _thread.is_alive():
+        return
+    _stop.clear()
+    _thread = threading.Thread(target=_retrain_loop, name="als-retrainer", daemon=True)
+    _thread.start()
+
+
+def stop_retrainer() -> None:
+    global _thread
+    _stop.set()
+    _dirty.set()
+    if _thread is not None:
+        _thread.join(timeout=10)
+        _thread = None
+    _stop.clear()
+    _dirty.clear()
+
+
+def status() -> dict:
+    state = _model_state
+    return {
+        "trained": state is not None and state.model is not None,
+        "users": len(state.user_index) if state else 0,
+        "items": len(state.item_index) if state else 0,
+        "last_trained_at": _last_trained_at,
+        "background_retrain": get_settings().enable_background_retrain,
+        "dirty": _dirty.is_set(),
+    }
 
 
 def recommend_for_user(
