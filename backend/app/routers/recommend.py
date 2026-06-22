@@ -41,7 +41,7 @@ def similar_movies(
     cache_key = f"similar:{movie_id}:{method}:{limit}:{alpha}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return RecommendationResponse.model_validate(cached)
 
     if method == "collaborative":
         resp = _to_response("collaborative", collaborative.similar_items(db, movie_id, limit))
@@ -50,7 +50,7 @@ def similar_movies(
     else:
         resp = _to_response("content", content.similar_to_movie(db, movie_id, limit))
 
-    cache.set(cache_key, resp)
+    cache.set(cache_key, resp.model_dump())
     return resp
 
 
@@ -65,7 +65,7 @@ def recommend_for_user(
     cache_key = f"user:{user_id}:{method}:{limit}:{alpha}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return RecommendationResponse.model_validate(cached)
 
     if method == "content":
         resp = _to_response("content", content.recommend_for_user_by_taste(db, user_id, limit))
@@ -74,5 +74,5 @@ def recommend_for_user(
     else:
         resp = _to_response("collaborative", collaborative.recommend_for_user(db, user_id, limit))
 
-    cache.set(cache_key, resp)
+    cache.set(cache_key, resp.model_dump())
     return resp
