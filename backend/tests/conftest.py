@@ -3,6 +3,10 @@ import os
 # Configure the app to use an offline embedder and a dedicated test database
 # BEFORE any app module (which reads settings at import time) is imported.
 os.environ["CINEREC_EMBEDDER"] = "hash"
+# Force the in-process cache and synchronous (no background thread) retraining so tests
+# are deterministic and do not require Redis.
+os.environ["CINEREC_REDIS_URL"] = ""
+os.environ["CINEREC_ENABLE_BACKGROUND_RETRAIN"] = "false"
 os.environ.setdefault(
     "CINEREC_DATABASE_URL",
     "postgresql+psycopg://cinerec:cinerec@localhost:5432/cinerec_test",
@@ -51,7 +55,7 @@ def client(_db_setup):
     # Reset state between tests.
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    collaborative.invalidate()
+    collaborative.reset()
 
     embedder = get_embedder()
     seed_movies = [
