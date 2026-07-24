@@ -8,14 +8,23 @@ class MovieBase(BaseModel):
     title: str
     year: int | None = None
     genres: list[str] = []
+    poster_url: str | None = None
+    avg_rating: float | None = None
+    num_ratings: int = 0
 
 
 class MovieDetail(MovieBase):
     tags: str | None = None
+    overview: str | None = None
     tmdb_id: int | None = None
     imdb_id: str | None = None
-    avg_rating: float | None = None
-    num_ratings: int = 0
+
+
+class MoviePage(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[MovieBase]
 
 
 class ScoredMovie(MovieBase):
@@ -39,3 +48,5 @@ class HealthResponse(BaseModel):
     ratings: int
     embeddings: int
     embedder: str
+    cache_backend: str
+    als: dict

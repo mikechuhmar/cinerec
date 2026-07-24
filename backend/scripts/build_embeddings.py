@@ -40,7 +40,7 @@ def main(batch_size: int = 256) -> None:
         for start in range(0, len(movies), batch_size):
             batch = movies[start : start + batch_size]
             texts = [
-                build_movie_text(m.title, m.year, m.genres, m.tags) for m in batch
+                build_movie_text(m.title, m.year, m.genres, m.tags, m.overview) for m in batch
             ]
             vectors = embedder.encode(texts)
             for movie, vector in zip(batch, vectors, strict=True):

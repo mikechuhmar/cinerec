@@ -13,10 +13,18 @@ async def lifespan(app: FastAPI):
     # Ensure the pgvector extension and tables exist on startup.
     from sqlalchemy import text
 
+    from app.recsys import collaborative
+
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     Base.metadata.create_all(bind=engine)
-    yield
+
+    # Start the background ALS retrainer (no-op if disabled).
+    collaborative.start_retrainer()
+    try:
+        yield
+    finally:
+        collaborative.stop_retrainer()
 
 
 app = FastAPI(

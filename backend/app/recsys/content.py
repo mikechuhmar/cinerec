@@ -9,7 +9,13 @@ from sqlalchemy.orm import Session
 from app.models import Movie, Rating
 
 
-def build_movie_text(title: str, year: int | None, genres: list[str], tags: str | None) -> str:
+def build_movie_text(
+    title: str,
+    year: int | None,
+    genres: list[str],
+    tags: str | None,
+    overview: str | None = None,
+) -> str:
     parts = [title]
     if year:
         parts.append(str(year))
@@ -17,6 +23,8 @@ def build_movie_text(title: str, year: int | None, genres: list[str], tags: str 
         parts.append(" ".join(genres))
     if tags:
         parts.append(tags)
+    if overview:
+        parts.append(overview)
     return " ".join(parts)
 
 
