@@ -48,3 +48,5 @@ class HealthResponse(BaseModel):
     ratings: int
     embeddings: int
     embedder: str
+    cache_backend: str
+    als: dict

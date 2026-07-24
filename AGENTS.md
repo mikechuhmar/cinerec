@@ -27,6 +27,21 @@ by the update script and is needed to actually run the app.
   cd backend && uv run python -m scripts.load_data && uv run python -m scripts.build_embeddings
   ```
 
+### Redis cache & background retraining
+
+- Redis is installed natively and, like Postgres, does **not** auto-start on a fresh VM. Start it
+  with `sudo service redis-server start` (verify with `redis-cli ping`).
+- The recommendation cache uses Redis when `CINEREC_REDIS_URL` is set and reachable; otherwise it
+  **transparently falls back to an in-process cache** (so a missing Redis never breaks the app).
+  `/health` reports the active `cache_backend`. Only the `cinerec:rec:*` namespace is used/cleared.
+- The ALS model is refreshed by a background worker thread (started in the FastAPI lifespan).
+  `POST /ratings` marks the model dirty and signals the worker, which retrains off the request
+  path and atomically swaps the model — so recommendation requests never block on training. This
+  is eventually consistent: a brand-new user's collaborative recommendations appear a moment later
+  (typically ~1-2s), not instantly. `/health.als` shows `users`/`items`/`dirty`/`last_trained_at`.
+- Tests set `CINEREC_REDIS_URL=""` and `CINEREC_ENABLE_BACKGROUND_RETRAIN=false` for determinism
+  (in-process cache + synchronous training); `collaborative.reset()` forces a synchronous rebuild.
+
 ### Backend gotchas
 
 - `uv` lives at `~/.local/bin` — add it to `PATH` if `uv` is not found.

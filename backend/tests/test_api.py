@@ -6,6 +6,8 @@ def test_health(client):
     assert data["movies"] == 5
     assert data["embeddings"] == 5
     assert data["embedder"] == "hash"
+    assert data["cache_backend"] == "in-process"
+    assert data["als"]["background_retrain"] is False
 
 
 def test_list_and_search_movies(client):
@@ -100,6 +102,24 @@ def test_hybrid_user_recommendation(client):
     # Already-rated movies must be excluded from the user's recommendations.
     rec_ids = {item["id"] for item in data["items"]}
     assert 1 not in rec_ids and 2 not in rec_ids
+
+
+def test_recommendation_cache(client):
+    from app.recsys import cache
+
+    cache.clear()
+    key = "similar:3:content:10:0.5"
+    assert cache.get(key) is None
+
+    first = client.get("/recommend/similar/3", params={"method": "content"}).json()
+    # The response is now cached and identical on a second call.
+    assert cache.get(key) is not None
+    second = client.get("/recommend/similar/3", params={"method": "content"}).json()
+    assert first == second
+
+    # New ratings invalidate (clear) the recommendation cache.
+    client.post("/ratings", json={"user_id": 7, "movie_id": 3, "rating": 5.0})
+    assert cache.get(key) is None
 
 
 def test_add_rating_and_invalidate(client):

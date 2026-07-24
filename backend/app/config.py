@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     als_iterations: int = 20
     als_regularization: float = 0.05
 
+    # Recommendation cache. If a Redis URL is set and reachable it is used; otherwise the
+    # service transparently falls back to an in-process TTL cache.
+    redis_url: str | None = "redis://localhost:6379/0"
+    cache_ttl_seconds: int = 300
+
+    # Background ALS retraining: a worker thread retrains off the request path when new
+    # ratings arrive (signal-driven) so requests never block on training.
+    enable_background_retrain: bool = True
+    retrain_interval_seconds: int = 60
+
     # Optional TMDB enrichment (not required for the MovieLens demo).
     tmdb_api_key: str | None = None
 

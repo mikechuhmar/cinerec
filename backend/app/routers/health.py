@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import get_db
 from app.models import Movie, Rating
+from app.recsys import cache, collaborative
 from app.schemas import HealthResponse
 
 router = APIRouter(tags=["health"])
@@ -23,4 +24,6 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
         ratings=ratings,
         embeddings=embeddings,
         embedder=get_settings().embedder,
+        cache_backend=cache.backend_name(),
+        als=collaborative.status(),
     )
