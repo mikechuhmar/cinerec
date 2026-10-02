@@ -19,8 +19,9 @@ import httpx
 import pandas as pd
 from sqlalchemy import delete, text
 
-from app.db import Base, SessionLocal, engine
+from app.db import SessionLocal, engine
 from app.models import Movie, Rating
+from scripts.migrate import upgrade as run_migrations
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATASETS = {
@@ -86,7 +87,8 @@ def load(name: str, ratings_limit: int | None) -> None:
             tmdb = int(row["tmdbId"]) if pd.notna(row["tmdbId"]) else None
             links_by_movie[int(row["movieId"])] = (imdb, tmdb)
 
-    Base.metadata.create_all(bind=engine)
+    # Ensure the schema exists (Alembic is the source of truth for the schema).
+    run_migrations("head")
 
     with SessionLocal() as db:
         print("Clearing existing data ...")
