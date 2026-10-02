@@ -9,6 +9,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -49,6 +50,11 @@ class Rating(Base):
         ForeignKey("movies.id", ondelete="CASCADE"), index=True, nullable=False
     )
     rating: Mapped[float] = mapped_column(Float, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     movie: Mapped["Movie"] = relationship(back_populates="ratings")
+
+    # One rating per (user, movie); new ratings upsert over the previous value.
+    __table_args__ = (UniqueConstraint("user_id", "movie_id", name="uq_ratings_user_movie"),)
