@@ -1,6 +1,7 @@
 export interface Movie {
   id: number;
   title: string;
+  title_ru?: string | null;
   year: number | null;
   genres: string[];
   poster_url: string | null;
@@ -11,6 +12,7 @@ export interface Movie {
 export interface MovieDetail extends Movie {
   tags: string | null;
   overview: string | null;
+  overview_ru?: string | null;
   tmdb_id: number | null;
   imdb_id: string | null;
 }
