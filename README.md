@@ -1,5 +1,7 @@
 # cinerec
 
+*Documentation in other languages: English · [Русский](README.ru.md).*
+
 A modern **movie recommendation system**: FastAPI + PostgreSQL/pgvector backend with a
 React (Vite) frontend. It combines three recommendation strategies:
 
