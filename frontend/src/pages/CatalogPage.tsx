@@ -34,7 +34,7 @@ export function CatalogPage() {
       { movieId: selectedId, rating: value },
       {
         onSuccess: () => {
-          setToast(`Rated movie ${selectedId} ${value}★ as user ${userId}`);
+          setToast(`Оценка ${value}★ сохранена (пользователь ${userId})`);
           setTimeout(() => setToast(""), 3000);
         },
       },
@@ -42,18 +42,23 @@ export function CatalogPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-white/10 bg-gradient-to-r from-indigo-900/40 to-slate-950 px-6 py-5">
-        <h1 className="text-2xl font-bold tracking-tight">
-          🎬 cinerec
-          <span className="ml-2 text-sm font-normal text-slate-400">
-            movie recommendation engine · pgvector + ALS + hybrid
-          </span>
-        </h1>
+    <div className="min-h-screen text-slate-100">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-6 py-4">
+          <span className="text-2xl">🎬</span>
+          <div>
+            <h1 className="bg-gradient-to-r from-indigo-300 via-violet-300 to-fuchsia-300 bg-clip-text text-2xl font-extrabold tracking-tight text-transparent">
+              cinerec
+            </h1>
+            <p className="text-xs text-slate-400">
+              Рекомендатель фильмов · pgvector + ALS + гибрид
+            </p>
+          </div>
+        </div>
       </header>
 
       {toast && (
-        <div className="fixed top-4 right-4 z-50 rounded-lg bg-emerald-600 px-4 py-2 text-sm shadow-lg">
+        <div className="animate-fade-in-up fixed top-20 right-4 z-50 rounded-xl border border-emerald-400/30 bg-emerald-600/90 px-4 py-2.5 text-sm font-medium text-white shadow-xl backdrop-blur">
           {toast}
         </div>
       )}
@@ -72,7 +77,7 @@ export function CatalogPage() {
           onPick={pick}
         />
 
-        <section className="lg:sticky lg:top-6 lg:h-fit">
+        <section className="lg:sticky lg:top-24 lg:h-fit">
           <UserRecsPanel userId={userId} setUserId={setUserId} onPick={pick} />
           <MovieDetailPanel
             movieId={selectedId}
@@ -84,6 +89,11 @@ export function CatalogPage() {
           />
         </section>
       </main>
+
+      <footer className="mx-auto max-w-7xl px-6 pt-2 pb-8 text-center text-xs text-slate-600">
+        Данные: MovieLens · Рекомендации: контент (pgvector) + коллаборативная фильтрация (ALS) +
+        гибрид
+      </footer>
     </div>
   );
 }

@@ -58,6 +58,6 @@ describe("CatalogPage", () => {
 
     expect(screen.getByRole("heading", { name: /cinerec/ })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("The Matrix")).toBeInTheDocument());
-    expect(screen.getByText("1 movies")).toBeInTheDocument();
+    expect(screen.getByText("Найдено: 1 фильм")).toBeInTheDocument();
   });
 });
