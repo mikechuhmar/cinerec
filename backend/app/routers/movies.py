@@ -68,6 +68,7 @@ async def list_movies(
         MovieBase(
             id=m.id,
             title=m.title,
+            title_ru=m.title_ru,
             year=m.year,
             genres=m.genres,
             poster_url=m.poster_url,
@@ -102,11 +103,13 @@ async def get_movie(movie_id: int, db: AsyncSession = Depends(get_async_db)) -> 
     return MovieDetail(
         id=movie.id,
         title=movie.title,
+        title_ru=movie.title_ru,
         year=movie.year,
         genres=movie.genres,
         poster_url=movie.poster_url,
         tags=movie.tags,
         overview=movie.overview,
+        overview_ru=movie.overview_ru,
         tmdb_id=movie.tmdb_id,
         imdb_id=movie.imdb_id,
         avg_rating=round(float(avg_rating), 2) if avg_rating is not None else None,

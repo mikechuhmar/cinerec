@@ -6,6 +6,7 @@ class MovieBase(BaseModel):
 
     id: int
     title: str
+    title_ru: str | None = None
     year: int | None = None
     genres: list[str] = []
     poster_url: str | None = None
@@ -16,6 +17,7 @@ class MovieBase(BaseModel):
 class MovieDetail(MovieBase):
     tags: str | None = None
     overview: str | None = None
+    overview_ru: str | None = None
     tmdb_id: int | None = None
     imdb_id: str | None = None
 
