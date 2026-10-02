@@ -64,21 +64,24 @@ export function searchMovies(query: CatalogQuery): Promise<MoviePage> {
   return getJSON<MoviePage>(`/movies?${p.toString()}`);
 }
 
+export interface UserRating {
+  movie_id: number;
+  rating: number;
+}
+
 export const getGenres = () => getJSON<string[]>("/movies/genres");
 
 export const getMovie = (id: number) => getJSON<MovieDetail>(`/movies/${id}`);
 
-export const getSimilar = (id: number, method: SimilarMethod) =>
-  getJSON<RecommendationResponse>(`/recommend/similar/${id}?method=${method}&limit=8`);
+export const getSimilar = (id: number, method: SimilarMethod, limit = 8) =>
+  getJSON<RecommendationResponse>(`/recommend/similar/${id}?method=${method}&limit=${limit}`);
 
-export const getUserRecs = (userId: number, method: UserMethod) =>
-  getJSON<RecommendationResponse>(`/recommend/user/${userId}?method=${method}&limit=8`);
+export const getUserRecs = (userId: number, method: UserMethod, limit = 8) =>
+  getJSON<RecommendationResponse>(`/recommend/user/${userId}?method=${method}&limit=${limit}`);
 
-export async function addRating(
-  userId: number,
-  movieId: number,
-  rating: number,
-): Promise<void> {
+export const getUserRatings = (userId: number) => getJSON<UserRating[]>(`/ratings/user/${userId}`);
+
+export async function addRating(userId: number, movieId: number, rating: number): Promise<void> {
   const resp = await fetch(`${API}/ratings`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
