@@ -21,12 +21,25 @@ dependencies = [
     "httpx>=0.28",
     "python-dotenv>=1.0",
     "redis>=5.2",
+    "alembic>=1.14",
+    "structlog>=24.4",
+    "asgi-correlation-id>=4.3",
+    "prometheus-fastapi-instrumentator>=7.0",
+    "slowapi>=0.1.9",
+    "opentelemetry-sdk>=1.29",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.29",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "pytest-asyncio>=0.24",
+    "fakeredis>=2.26",
     "ruff>=0.8",
+    "mypy>=1.13",
 ]
 
 [tool.uv]
@@ -44,3 +57,17 @@ ignore = ["E501", "B008"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "--cov=app --cov-report=term-missing"
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["app"]
+ignore_missing_imports = true
+warn_unused_ignores = false
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[tool.coverage.run]
+source = ["app"]

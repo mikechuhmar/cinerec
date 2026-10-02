@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import Float, cast, func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db
+from app.db import get_async_db
 from app.models import Movie, Rating
 from app.schemas import MovieBase, MovieDetail, MoviePage
 
@@ -12,7 +12,7 @@ SORT_FIELDS = {"title", "year", "rating", "popularity"}
 
 
 @router.get("", response_model=MoviePage)
-def list_movies(
+async def list_movies(
     q: str | None = Query(None, description="Case-insensitive title search"),
     genre: str | None = Query(None, description="Filter by genre"),
     year_from: int | None = Query(None, description="Minimum release year"),
@@ -22,7 +22,7 @@ def list_movies(
     order: str = Query("desc", pattern="^(asc|desc)$"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ) -> MoviePage:
     if sort not in SORT_FIELDS:
         raise HTTPException(status_code=422, detail=f"sort must be one of {sorted(SORT_FIELDS)}")
@@ -43,7 +43,7 @@ def list_movies(
     if q:
         stmt = stmt.where(Movie.title.ilike(f"%{q}%"))
     if genre:
-        stmt = stmt.where(Movie.genres.any(genre))
+        stmt = stmt.where(Movie.genres.any(genre))  # type: ignore[arg-type]
     if year_from is not None:
         stmt = stmt.where(Movie.year >= year_from)
     if year_to is not None:
@@ -61,9 +61,9 @@ def list_movies(
     else:  # popularity
         stmt = stmt.order_by(direction(num_ratings), Movie.title)
 
-    total = db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
+    total = await db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
 
-    rows = db.execute(stmt.limit(limit).offset(offset)).all()
+    rows = (await db.execute(stmt.limit(limit).offset(offset))).all()
     items = [
         MovieBase(
             id=m.id,
@@ -80,19 +80,23 @@ def list_movies(
 
 
 @router.get("/genres", response_model=list[str])
-def list_genres(db: Session = Depends(get_db)) -> list[str]:
-    rows = db.execute(select(func.unnest(Movie.genres)).distinct()).scalars()
+async def list_genres(db: AsyncSession = Depends(get_async_db)) -> list[str]:
+    rows = (await db.execute(select(func.unnest(Movie.genres)).distinct())).scalars()
     return sorted({g for g in rows if g})
 
 
 @router.get("/{movie_id}", response_model=MovieDetail)
-def get_movie(movie_id: int, db: Session = Depends(get_db)) -> MovieDetail:
-    movie = db.get(Movie, movie_id)
+async def get_movie(movie_id: int, db: AsyncSession = Depends(get_async_db)) -> MovieDetail:
+    movie = await db.get(Movie, movie_id)
     if movie is None:
         raise HTTPException(status_code=404, detail="Movie not found")
 
-    stats = db.execute(
-        select(func.avg(Rating.rating), func.count(Rating.id)).where(Rating.movie_id == movie_id)
+    stats = (
+        await db.execute(
+            select(func.avg(Rating.rating), func.count(Rating.id)).where(
+                Rating.movie_id == movie_id
+            )
+        )
     ).one()
     avg_rating, num_ratings = stats
     return MovieDetail(

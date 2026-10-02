@@ -5,9 +5,11 @@ and the standard lint/test/build/run commands (do not duplicate them here).
 
 ## Cursor Cloud specific instructions
 
-The update script (run automatically on VM startup) only refreshes dependencies
-(`uv sync` for `backend/`, `npm install` for `frontend/`). Everything below is **not** handled
-by the update script and is needed to actually run the app.
+A committed `.cursor/environment.json` now bootstraps the environment: `install` installs uv +
+PostgreSQL 16/pgvector + Redis, syncs deps, runs Alembic migrations and seeds data (hash
+embedder) if the catalogue is empty; `start` brings up PostgreSQL + Redis each boot; and
+`backend`/`frontend` terminals run the dev servers. The notes below still apply when running
+steps manually or debugging a fresh VM where that bootstrap has not completed.
 
 ### PostgreSQL (not auto-started)
 
@@ -21,11 +23,17 @@ by the update script and is needed to actually run the app.
 - The `cinerec` role is a **SUPERUSER** on purpose — pgvector's `CREATE EXTENSION vector`
   requires superuser, including for the auto-created `cinerec_test` database used by pytest.
 - Loaded data (≈9.7k movies, ≈100k ratings, embeddings, HNSW index) lives in the cluster data
-  directory and **persists across VM snapshots**. After starting Postgres, check
-  `GET /health`; only re-seed if it reports 0 movies:
-  ```bash
-  cd backend && uv run python -m scripts.load_data && uv run python -m scripts.build_embeddings
-  ```
+ directory and **persists across VM snapshots**. After starting Postgres, apply migrations
+ and check `GET /health`; only re-seed if it reports 0 movies:
+ ```bash
+ cd backend && uv run python -m scripts.migrate   # alembic upgrade head
+ cd backend && uv run python -m scripts.load_data && uv run python -m scripts.build_embeddings
+ ```
+
+- The schema is managed by **Alembic** (`backend/migrations/`); `scripts.migrate` runs
+ `alembic upgrade head`. The app no longer calls `create_all` on startup (tests still do).
+- Lint/format/type-check/test: `uv run ruff check .`, `uv run ruff format .`, `uv run mypy`,
+ `uv run pytest` (backend); `npm run lint`, `npm run format`, `npm run test` (frontend).
 
 ### Redis cache & background retraining
 

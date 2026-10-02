@@ -49,16 +49,13 @@ def recommend_for_user_by_taste(
     db: Session, user_id: int, limit: int = 10, like_threshold: float = 4.0
 ) -> list[tuple[Movie, float]]:
     """Build a taste profile from a user's highly-rated movies and find nearest movies."""
-    liked = (
-        db.execute(
-            select(Movie.embedding, Rating.rating)
-            .join(Rating, Rating.movie_id == Movie.id)
-            .where(Rating.user_id == user_id)
-            .where(Rating.rating >= like_threshold)
-            .where(Movie.embedding.is_not(None))
-        )
-        .all()
-    )
+    liked = db.execute(
+        select(Movie.embedding, Rating.rating)
+        .join(Rating, Rating.movie_id == Movie.id)
+        .where(Rating.user_id == user_id)
+        .where(Rating.rating >= like_threshold)
+        .where(Movie.embedding.is_not(None))
+    ).all()
     if not liked:
         return []
 
