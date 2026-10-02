@@ -20,19 +20,27 @@ from app.config import get_settings
 settings = get_settings()
 
 
-def _async_url(url: str) -> str:
-    """psycopg3 speaks both sync and async over the same ``postgresql+psycopg://`` URL."""
+def _normalize_url(url: str) -> str:
+    """Pin the psycopg3 driver.
+
+    Managed-Postgres providers (Render, Railway, Fly, …) hand out URLs with the bare
+    ``postgresql://`` scheme, which SQLAlchemy maps to psycopg2. We always use psycopg3
+    (``postgresql+psycopg://``), which speaks both sync and async over the same URL.
+    """
+    for prefix in ("postgresql://", "postgres://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
     return url
 
 
+DATABASE_URL = _normalize_url(settings.database_url)
+
 # Sync engine — used by recsys (offloaded to a threadpool), the retrainer, and scripts.
-engine = create_engine(settings.database_url, pool_pre_ping=True, future=True)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 # Async engine — used by the request path.
-async_engine = create_async_engine(
-    _async_url(settings.database_url), pool_pre_ping=True, future=True
-)
+async_engine = create_async_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 AsyncSessionLocal = async_sessionmaker(
     bind=async_engine, autoflush=False, expire_on_commit=False, class_=AsyncSession
 )
