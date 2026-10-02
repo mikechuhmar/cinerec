@@ -98,7 +98,11 @@ uv run python -m scripts.load_data        # download + load MovieLens
 uv run python -m scripts.build_embeddings # compute embeddings + HNSW index
 uv run uvicorn app.main:app --reload      # http://localhost:8000/docs
 
-# Optional: enrich with TMDB posters/overviews (needs CINEREC_TMDB_API_KEY), then re-embed
+# Russian titles + posters for ~60 popular movies (offline, no API key required)
+uv run python -m scripts.seed_localized_demo
+
+# Optional: enrich the full catalogue with TMDB posters + English/Russian overviews
+# (needs CINEREC_TMDB_API_KEY: fetches language=en-US and language=ru-RU), then re-embed
 CINEREC_TMDB_API_KEY=xxx uv run python -m scripts.enrich_tmdb
 uv run python -m scripts.build_embeddings
 
