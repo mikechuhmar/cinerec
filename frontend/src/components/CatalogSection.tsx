@@ -28,7 +28,9 @@ export function CatalogSection({
   onPick,
 }: Props) {
   const pages = query.data?.pages ?? [];
-  const movies = pages.flatMap((p) => p.items);
+  // Dedupe by id: when the catalogue shifts between page fetches (e.g. after a new rating
+  // invalidates the query), fixed offsets can overlap and yield the same movie twice.
+  const movies = Array.from(new Map(pages.flatMap((p) => p.items).map((m) => [m.id, m])).values());
   const total = pages[0]?.total ?? 0;
 
   return (
