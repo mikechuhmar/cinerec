@@ -29,11 +29,24 @@ class Settings(BaseSettings):
     # ratings arrive (signal-driven) so requests never block on training.
     enable_background_retrain: bool = True
     retrain_interval_seconds: int = 60
+    # Where the fitted ALS model is persisted so it survives restarts and warm-loads on
+    # startup (empty string disables persistence).
+    als_model_path: str = "data/als_model.npz"
 
     # Optional TMDB enrichment (not required for the MovieLens demo).
     tmdb_api_key: str | None = None
 
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+    # Observability / logging.
+    log_level: str = "INFO"
+    log_json: bool = True  # structured JSON logs (disable for human-readable dev logs)
+    metrics_enabled: bool = True  # expose Prometheus metrics at /metrics
+    tracing_enabled: bool = False  # OpenTelemetry tracing (opt-in; needs an OTLP endpoint)
+    otlp_endpoint: str | None = None  # e.g. http://localhost:4317
+
+    # Rate limiting (slowapi). Applied per client IP; empty string disables.
+    rate_limit: str = "120/minute"
 
 
 @lru_cache

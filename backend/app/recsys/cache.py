@@ -17,6 +17,9 @@ import time
 from typing import Any, Protocol
 
 from app.config import get_settings
+from app.logging_config import get_logger
+
+log = get_logger(__name__)
 
 _KEY_PREFIX = "cinerec:rec:"
 
@@ -85,9 +88,10 @@ def _build_backend() -> _Backend:
 
             client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
             client.ping()
+            log.info("cache_backend_selected", backend="redis", url=settings.redis_url)
             return RedisBackend(client)
         except Exception as exc:  # pragma: no cover - depends on runtime env
-            print(f"[cache] Redis unavailable ({exc}); falling back to in-process cache.")
+            log.warning("redis_unavailable", error=str(exc), fallback="in-process")
     return InProcessBackend()
 
 
@@ -102,7 +106,7 @@ def get(key: str) -> Any | None:
     try:
         return _backend.get(key)
     except Exception as exc:  # pragma: no cover - defensive against transient Redis errors
-        print(f"[cache] get failed ({exc}); ignoring cache.")
+        log.warning("cache_get_failed", error=str(exc))
         return None
 
 
@@ -111,11 +115,11 @@ def set(key: str, value: Any, ttl: int | None = None) -> None:
     try:
         _backend.set(key, value, ttl)
     except Exception as exc:  # pragma: no cover
-        print(f"[cache] set failed ({exc}); skipping cache write.")
+        log.warning("cache_set_failed", error=str(exc))
 
 
 def clear() -> None:
     try:
         _backend.clear()
     except Exception as exc:  # pragma: no cover
-        print(f"[cache] clear failed ({exc}).")
+        log.warning("cache_clear_failed", error=str(exc))
