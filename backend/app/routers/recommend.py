@@ -24,6 +24,7 @@ def _to_response(source: str, scored: list[tuple[Movie, float]]) -> Recommendati
         ScoredMovie(
             id=m.id,
             title=m.title,
+            title_ru=m.title_ru,
             year=m.year,
             genres=m.genres,
             poster_url=m.poster_url,

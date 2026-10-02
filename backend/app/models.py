@@ -26,10 +26,13 @@ class Movie(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)  # MovieLens movieId
     title: Mapped[str] = mapped_column(String(512), nullable=False)
+    # Localized (Russian) title and overview, populated from TMDB (``language=ru-RU``).
+    title_ru: Mapped[str | None] = mapped_column(String(512), nullable=True)
     year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     genres: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     tags: Mapped[str | None] = mapped_column(Text, nullable=True)
     overview: Mapped[str | None] = mapped_column(Text, nullable=True)
+    overview_ru: Mapped[str | None] = mapped_column(Text, nullable=True)
     poster_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     tmdb_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     imdb_id: Mapped[str | None] = mapped_column(String(20), nullable=True)

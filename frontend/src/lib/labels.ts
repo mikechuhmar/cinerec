@@ -27,6 +27,10 @@ const GENRE_RU: Record<string, string> = {
 
 export const translateGenre = (genre: string): string => GENRE_RU[genre] ?? genre;
 
+// Prefer the Russian title when available, falling back to the original.
+export const displayTitle = (m: { title: string; title_ru?: string | null }): string =>
+  m.title_ru || m.title;
+
 export const METHOD_RU: Record<SimilarMethod, string> = {
   hybrid: "Гибрид",
   content: "По содержанию",

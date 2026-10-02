@@ -23,6 +23,12 @@ describe("MovieCard", () => {
     expect(screen.getByText("Фантастика")).toBeInTheDocument();
   });
 
+  it("prefers the Russian title when available", () => {
+    render(<MovieCard movie={{ ...movie, title_ru: "Матрица" }} onClick={() => {}} />);
+    expect(screen.getByText("Матрица")).toBeInTheDocument();
+    expect(screen.queryByText("The Matrix")).not.toBeInTheDocument();
+  });
+
   it("shows the recommendation score when provided", () => {
     render(<MovieCard movie={movie} score={0.8734} onClick={() => {}} />);
     expect(screen.getByText("0.873")).toBeInTheDocument();

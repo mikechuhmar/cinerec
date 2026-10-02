@@ -1,9 +1,15 @@
-"""Enrich movies with posters and overviews from TMDB.
+"""Enrich movies with posters, overviews and Russian titles/overviews from TMDB.
 
 Requires a TMDB API key via ``CINEREC_TMDB_API_KEY``. Without a key the script exits
-gracefully (the rest of the system works fine without posters/overviews).
+gracefully (the rest of the system works fine without posters/overviews). To populate a
+handful of popular movies with Russian titles + posters *without* a key, use the offline
+fixture instead: ``uv run python -m scripts.seed_localized_demo``.
 
     CINEREC_TMDB_API_KEY=xxx uv run python -m scripts.enrich_tmdb --limit 200
+
+Each movie needs up to two requests: ``language=en-US`` (English overview, used for the
+content embeddings) and ``language=ru-RU`` (Russian title/overview shown in the UI). The
+poster is language-agnostic; TMDB returns a localized one when available.
 
 After enriching, rebuild embeddings so overviews contribute to content similarity:
     uv run python -m scripts.build_embeddings
@@ -26,16 +32,31 @@ TMDB_URL = "https://api.themoviedb.org/3/movie/{tmdb_id}"
 IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 
 
-def enrich_one(client: httpx.Client, api_key: str, movie: Movie) -> bool:
+def _fetch(client: httpx.Client, api_key: str, tmdb_id: int, language: str) -> dict | None:
     resp = client.get(
-        TMDB_URL.format(tmdb_id=movie.tmdb_id),
-        params={"api_key": api_key, "language": "en-US"},
+        TMDB_URL.format(tmdb_id=tmdb_id),
+        params={"api_key": api_key, "language": language},
     )
-    if resp.status_code != 200:
+    return resp.json() if resp.status_code == 200 else None
+
+
+def enrich_one(client: httpx.Client, api_key: str, movie: Movie) -> bool:
+    en = _fetch(client, api_key, movie.tmdb_id, "en-US")
+    if en is None:
         return False
-    data = resp.json()
-    movie.overview = data.get("overview") or movie.overview
-    poster_path = data.get("poster_path")
+    movie.overview = en.get("overview") or movie.overview
+    poster_path = en.get("poster_path")
+
+    ru = _fetch(client, api_key, movie.tmdb_id, "ru-RU")
+    if ru is not None:
+        # TMDB returns the English title in ``title`` when no localized title exists; only
+        # keep a Russian title that actually differs from the original.
+        ru_title = ru.get("title")
+        if ru_title and ru_title != en.get("title"):
+            movie.title_ru = ru_title
+        movie.overview_ru = ru.get("overview") or movie.overview_ru
+        poster_path = ru.get("poster_path") or poster_path
+
     if poster_path:
         movie.poster_url = f"{IMAGE_BASE}{poster_path}"
     return True
