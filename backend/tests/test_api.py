@@ -127,3 +127,25 @@ def test_add_rating_and_invalidate(client):
     assert resp.status_code == 201
     detail = client.get("/movies/3").json()
     assert detail["num_ratings"] == 2
+
+
+def test_rating_upsert_no_duplicates(client):
+    # Rating the same (user, movie) twice updates in place instead of duplicating.
+    client.post("/ratings", json={"user_id": 42, "movie_id": 1, "rating": 2.0})
+    client.post("/ratings", json={"user_id": 42, "movie_id": 1, "rating": 4.5})
+
+    rows = client.get("/ratings/user/42").json()
+    movie1 = [r for r in rows if r["movie_id"] == 1]
+    assert len(movie1) == 1
+    assert movie1[0]["rating"] == 4.5
+
+
+def test_add_rating_missing_movie(client):
+    resp = client.post("/ratings", json={"user_id": 1, "movie_id": 9999, "rating": 5.0})
+    assert resp.status_code == 404
+
+
+def test_list_user_ratings(client):
+    rows = client.get("/ratings/user/1").json()
+    rated = {r["movie_id"] for r in rows}
+    assert {1, 2, 5}.issubset(rated)
