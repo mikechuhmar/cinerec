@@ -49,7 +49,7 @@ app = FastAPI(
 # Rate limiting (global, per client IP). We drive slowapi's Limiter directly from a small
 # middleware instead of ``SlowAPIMiddleware`` because that middleware relies on walking
 # ``app.routes`` for ``.endpoint``, which newer FastAPI wraps in ``_IncludedRouter`` objects.
-_limits = [settings.rate_limit] if settings.rate_limit else []
+_limits: list = [settings.rate_limit] if settings.rate_limit else []
 limiter = Limiter(
     key_func=get_remote_address,
     application_limits=_limits,

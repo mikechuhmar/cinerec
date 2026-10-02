@@ -43,7 +43,7 @@ async def list_movies(
     if q:
         stmt = stmt.where(Movie.title.ilike(f"%{q}%"))
     if genre:
-        stmt = stmt.where(Movie.genres.any(genre))
+        stmt = stmt.where(Movie.genres.any(genre))  # type: ignore[arg-type]
     if year_from is not None:
         stmt = stmt.where(Movie.year >= year_from)
     if year_to is not None:

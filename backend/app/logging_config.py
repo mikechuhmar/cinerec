@@ -9,6 +9,7 @@ colourised key/value in dev). The active request's correlation id (set by
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import structlog
 from asgi_correlation_id import correlation_id
@@ -33,7 +34,7 @@ def configure_logging() -> None:
     settings = get_settings()
     level = getattr(logging, settings.log_level.upper(), logging.INFO)
 
-    shared_processors = [
+    shared_processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
         _add_request_id,
         structlog.processors.add_log_level,
