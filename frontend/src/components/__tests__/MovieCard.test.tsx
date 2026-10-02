@@ -20,7 +20,7 @@ describe("MovieCard", () => {
     expect(screen.getByText("The Matrix")).toBeInTheDocument();
     expect(screen.getByText("1999")).toBeInTheDocument();
     expect(screen.getByText(/★ 4.2/)).toBeInTheDocument();
-    expect(screen.getByText("Sci-Fi")).toBeInTheDocument();
+    expect(screen.getByText("Фантастика")).toBeInTheDocument();
   });
 
   it("shows the recommendation score when provided", () => {

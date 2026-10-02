@@ -12,7 +12,7 @@ describe("StarRating", () => {
   it("calls onRate with the chosen value", async () => {
     const onRate = vi.fn();
     render(<StarRating onRate={onRate} />);
-    await userEvent.click(screen.getByLabelText("Rate 4 stars"));
+    await userEvent.click(screen.getByLabelText("Оценить на 4"));
     expect(onRate).toHaveBeenCalledWith(4);
   });
 });

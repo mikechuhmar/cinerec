@@ -36,7 +36,9 @@ class Settings(BaseSettings):
     # Optional TMDB enrichment (not required for the MovieLens demo).
     tmdb_api_key: str | None = None
 
-    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Allowed CORS origins as a comma-separated list (so it is easy to set via a single env var
+    # on hosting platforms). Use "*" to allow any origin. Bare hostnames are assumed https.
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     # Observability / logging.
     log_level: str = "INFO"
@@ -47,6 +49,27 @@ class Settings(BaseSettings):
 
     # Rate limiting (slowapi). Applied per client IP; empty string disables.
     rate_limit: str = "120/minute"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Parse ``cors_origins`` into a normalised list of origins.
+
+        Accepts a comma-separated string; ``"*"`` means "allow any origin". Entries without a
+        scheme are assumed to be ``https`` (convenient when a hosting platform injects a bare
+        hostname). Trailing slashes are stripped so origins match the browser ``Origin`` header.
+        """
+        raw = self.cors_origins.strip()
+        if raw == "*":
+            return ["*"]
+        origins: list[str] = []
+        for part in raw.split(","):
+            origin = part.strip().rstrip("/")
+            if not origin:
+                continue
+            if not origin.startswith(("http://", "https://")):
+                origin = f"https://{origin}"
+            origins.append(origin)
+        return origins
 
 
 @lru_cache

@@ -1,0 +1,78 @@
+# Render Blueprint for cinerec — one public website (managed TLS + domains).
+#
+#   • cinerec-db        PostgreSQL 16 (pgvector enabled by the app on startup)
+#   • cinerec-redis     Managed Key Value (recommendation cache; optional)
+#   • cinerec-backend   FastAPI (Docker) — public API, serves /docs and /health
+#   • cinerec-frontend  React SPA (static) — the website users visit
+#
+# Deploy: push this repo to GitHub, then Render → New → Blueprint and point it here.
+# After the first deploy, seed the data once from the backend service Shell:
+#   python -m scripts.load_data && python -m scripts.build_embeddings
+# See DEPLOY.md for the full walkthrough.
+
+databases:
+  - name: cinerec-db
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  # Recommendation cache (optional — the app falls back to an in-process cache if absent).
+  - type: keyvalue
+    name: cinerec-redis
+    plan: free
+    region: oregon
+    ipAllowList: [] # internal access only
+    maxmemoryPolicy: allkeys-lru
+
+  # Backend API (FastAPI, built from backend/Dockerfile).
+  - type: web
+    name: cinerec-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: CINEREC_DATABASE_URL
+        fromDatabase:
+          name: cinerec-db
+          property: connectionString
+      - key: CINEREC_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: cinerec-redis
+          property: connectionString
+      # "hash" embedder avoids downloading the sentence-transformers model (fits the free tier).
+      # Switch to "sentence-transformers" on a paid instance for semantic embeddings.
+      - key: CINEREC_EMBEDDER
+        value: hash
+      - key: CINEREC_LOG_JSON
+        value: "true"
+      # Allow the frontend origin (Render injects the bare host; the app upgrades it to https).
+      - key: CINEREC_CORS_ORIGINS
+        fromService:
+          type: web
+          name: cinerec-frontend
+          property: host
+
+  # Frontend SPA (static site served from Render's CDN with automatic TLS).
+  - type: web
+    name: cinerec-frontend
+    runtime: static
+    region: oregon
+    buildCommand: npm --prefix frontend ci && npm --prefix frontend run build
+    staticPublishPath: ./frontend/dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      # Point the SPA at the backend's public URL (bare host → https in the app).
+      - key: VITE_API_BASE
+        fromService:
+          type: web
+          name: cinerec-backend
+          property: host
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

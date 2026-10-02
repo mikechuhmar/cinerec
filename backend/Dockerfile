@@ -24,5 +24,6 @@ COPY . .
 
 EXPOSE 8000
 
-# Apply migrations, then serve. Seed data with `scripts.load_data` / `scripts.build_embeddings`.
-CMD ["sh", "-c", "python -m scripts.migrate && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Apply migrations, then serve. Honour $PORT (set by most hosting platforms; default 8000).
+# Seed data once with `scripts.load_data` / `scripts.build_embeddings`.
+CMD ["sh", "-c", "python -m scripts.migrate && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

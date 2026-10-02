@@ -83,11 +83,13 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 
 
 # Middleware (outermost first): correlation id → CORS → rate limiting.
+# Credentials cannot be combined with a wildcard origin per the CORS spec.
+_cors_origins = settings.cors_origin_list
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
