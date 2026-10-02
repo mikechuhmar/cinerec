@@ -7,6 +7,11 @@ os.environ["CINEREC_EMBEDDER"] = "hash"
 # are deterministic and do not require Redis.
 os.environ["CINEREC_REDIS_URL"] = ""
 os.environ["CINEREC_ENABLE_BACKGROUND_RETRAIN"] = "false"
+# Disable model persistence, rate limiting and JSON logs for deterministic, isolated tests.
+os.environ["CINEREC_ALS_MODEL_PATH"] = ""
+os.environ["CINEREC_RATE_LIMIT"] = ""
+os.environ["CINEREC_METRICS_ENABLED"] = "false"
+os.environ["CINEREC_LOG_JSON"] = "false"
 os.environ.setdefault(
     "CINEREC_DATABASE_URL",
     "postgresql+psycopg://cinerec:cinerec@localhost:5432/cinerec_test",
