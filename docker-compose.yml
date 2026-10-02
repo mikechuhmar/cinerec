@@ -1,5 +1,12 @@
-# Optional convenience for local development of the PostgreSQL + pgvector database.
-# The Cursor Cloud VM uses a natively-installed PostgreSQL instead (see AGENTS.md).
+# Full local stack: PostgreSQL+pgvector, Redis, the FastAPI backend and the nginx-served SPA.
+#
+#   docker compose up --build
+#
+# After the stack is up, seed the catalogue (one-time) inside the backend container:
+#   docker compose exec backend python -m scripts.load_data
+#   docker compose exec backend python -m scripts.build_embeddings
+#
+# UI: http://localhost:5173  ·  API: http://localhost:8000/docs
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -11,6 +18,45 @@ services:
       - "5432:5432"
     volumes:
       - cinerec_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cinerec"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      CINEREC_DATABASE_URL: postgresql+psycopg://cinerec:cinerec@db:5432/cinerec
+      CINEREC_REDIS_URL: redis://redis:6379/0
+      CINEREC_EMBEDDER: hash # use "sentence-transformers" for semantic embeddings
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - cinerec_model:/app/data
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
 
 volumes:
   cinerec_pgdata:
+  cinerec_model:
