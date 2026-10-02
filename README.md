@@ -49,6 +49,12 @@ docker compose exec backend python -m scripts.build_embeddings
 # UI → http://localhost:5173 · API → http://localhost:8000/docs
 ```
 
+### Deploy as a website
+
+See [`DEPLOY.md`](DEPLOY.md) for publishing cinerec live — a one-click **Render** blueprint
+([`render.yaml`](render.yaml), managed Postgres/pgvector + Redis + TLS) or a **VPS + Docker Compose**
+setup with automatic HTTPS via Caddy.
+
 ## Tech stack
 
 | Layer        | Tech |
