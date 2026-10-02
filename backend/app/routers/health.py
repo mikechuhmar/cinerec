@@ -16,9 +16,7 @@ async def health(db: AsyncSession = Depends(get_async_db)) -> HealthResponse:
     movies = await db.scalar(select(func.count()).select_from(Movie)) or 0
     ratings = await db.scalar(select(func.count()).select_from(Rating)) or 0
     embeddings = (
-        await db.scalar(
-            select(func.count()).select_from(Movie).where(Movie.embedding.is_not(None))
-        )
+        await db.scalar(select(func.count()).select_from(Movie).where(Movie.embedding.is_not(None)))
         or 0
     )
     return HealthResponse(

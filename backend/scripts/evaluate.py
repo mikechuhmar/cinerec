@@ -65,7 +65,9 @@ def evaluate(k: int, n_users: int, like_threshold: float, seed: int) -> None:
     ]
     rng.shuffle(eligible)
     eligible = eligible[:n_users]
-    print(f"Evaluating {len(eligible)} users · {n_items} items · K={k} · embedder={settings.embedder}")
+    print(
+        f"Evaluating {len(eligible)} users · {n_items} items · K={k} · embedder={settings.embedder}"
+    )
 
     # Build train interactions (all eligible users' ratings minus their held-out item).
     test_item: dict[int, int] = {}
@@ -83,9 +85,7 @@ def evaluate(k: int, n_users: int, like_threshold: float, seed: int) -> None:
             train_cols.append(iidx)
             train_vals.append(r)
 
-    train = sp.csr_matrix(
-        (train_vals, (train_rows, train_cols)), shape=(len(eligible), n_items)
-    )
+    train = sp.csr_matrix((train_vals, (train_rows, train_cols)), shape=(len(eligible), n_items))
 
     from implicit.als import AlternatingLeastSquares
 
@@ -140,7 +140,7 @@ def evaluate(k: int, n_users: int, like_threshold: float, seed: int) -> None:
             results[name]["hr"].append(hr)
             results[name]["ndcg"].append(ndcg)
 
-    print(f"\n{'method':<16}{'HR@'+str(k):>10}{'NDCG@'+str(k):>12}")
+    print(f"\n{'method':<16}{'HR@' + str(k):>10}{'NDCG@' + str(k):>12}")
     print("-" * 38)
     for name, vals in results.items():
         print(f"{name:<16}{np.mean(vals['hr']):>10.4f}{np.mean(vals['ndcg']):>12.4f}")

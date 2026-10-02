@@ -34,7 +34,9 @@ def _to_response(source: str, scored: list[tuple[Movie, float]]) -> Recommendati
     return RecommendationResponse(source=source, items=items)
 
 
-def _compute_similar(movie_id: int, method: str, limit: int, alpha: float) -> RecommendationResponse:
+def _compute_similar(
+    movie_id: int, method: str, limit: int, alpha: float
+) -> RecommendationResponse:
     with SessionLocal() as db:
         if db.get(Movie, movie_id) is None:
             raise HTTPException(status_code=404, detail="Movie not found")

@@ -26,9 +26,7 @@ def _ensure_test_database() -> None:
     """Create the test database (and pgvector extension) if missing."""
     admin_dsn = "postgresql://cinerec:cinerec@localhost:5432/cinerec"
     with psycopg.connect(admin_dsn, autocommit=True) as conn:
-        exists = conn.execute(
-            "SELECT 1 FROM pg_database WHERE datname = 'cinerec_test'"
-        ).fetchone()
+        exists = conn.execute("SELECT 1 FROM pg_database WHERE datname = 'cinerec_test'").fetchone()
         if not exists:
             conn.execute("CREATE DATABASE cinerec_test")
 
@@ -85,8 +83,12 @@ def client(_db_setup):
             )
         # User 1 loves animated kids movies; user 2 loves sci-fi action.
         ratings = [
-            (1, 1, 5.0), (1, 2, 4.5), (1, 5, 2.0),
-            (2, 3, 5.0), (2, 4, 4.5), (2, 1, 2.5),
+            (1, 1, 5.0),
+            (1, 2, 4.5),
+            (1, 5, 2.0),
+            (2, 3, 5.0),
+            (2, 4, 4.5),
+            (2, 1, 2.5),
         ]
         for uid, mid, r in ratings:
             db.add(Rating(user_id=uid, movie_id=mid, rating=r))

@@ -61,9 +61,7 @@ class SentenceTransformerEmbedder:
         self.dim = int(self._model.get_sentence_embedding_dimension())
 
     def encode(self, texts: list[str]) -> np.ndarray:
-        vectors = self._model.encode(
-            texts, normalize_embeddings=True, show_progress_bar=False
-        )
+        vectors = self._model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
         return np.asarray(vectors, dtype=np.float32)
 
 

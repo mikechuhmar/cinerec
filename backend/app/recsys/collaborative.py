@@ -65,9 +65,7 @@ def _train(db: Session) -> _ALSState:
     cols_idx = [state.item_index[r[1]] for r in rows]
     # Treat ratings as confidence weights (implicit-feedback style).
     data = [float(r[2]) for r in rows]
-    user_items = sp.csr_matrix(
-        (data, (rows_idx, cols_idx)), shape=(len(user_ids), len(item_ids))
-    )
+    user_items = sp.csr_matrix((data, (rows_idx, cols_idx)), shape=(len(user_ids), len(item_ids)))
 
     model = AlternatingLeastSquares(
         factors=settings.als_factors,
@@ -95,7 +93,9 @@ def _save_model(state: _ALSState) -> None:
     try:
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         ui = state.user_items.tocsr()
-        user_ids = np.array(sorted(state.user_index, key=lambda u: state.user_index[u]), dtype=np.int64)
+        user_ids = np.array(
+            sorted(state.user_index, key=lambda u: state.user_index[u]), dtype=np.int64
+        )
         tmp = f"{path}.tmp.npz"
         with open(tmp, "wb") as fh:
             np.savez(
@@ -285,9 +285,7 @@ def status() -> dict:
     }
 
 
-def recommend_for_user(
-    db: Session, user_id: int, limit: int = 10
-) -> list[tuple[Movie, float]]:
+def recommend_for_user(db: Session, user_id: int, limit: int = 10) -> list[tuple[Movie, float]]:
     state = get_state(db)
     if state.model is None or user_id not in state.user_index:
         return []
