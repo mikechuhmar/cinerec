@@ -6,9 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 from sqlalchemy import text
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import get_settings
 from app.db import async_engine
@@ -46,10 +46,28 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiting (per client IP). slowapi reads limits off app.state.limiter.
-_default_limits = [settings.rate_limit] if settings.rate_limit else []
-limiter = Limiter(key_func=get_remote_address, default_limits=_default_limits)
+# Rate limiting (global, per client IP). We drive slowapi's Limiter directly from a small
+# middleware instead of ``SlowAPIMiddleware`` because that middleware relies on walking
+# ``app.routes`` for ``.endpoint``, which newer FastAPI wraps in ``_IncludedRouter`` objects.
+_limits = [settings.rate_limit] if settings.rate_limit else []
+limiter = Limiter(
+    key_func=get_remote_address,
+    application_limits=_limits,
+    enabled=bool(_limits),
+)
 app.state.limiter = limiter
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Apply the Limiter's global (``application_limits``) budget to every request."""
+
+    async def dispatch(self, request: Request, call_next):
+        if limiter.enabled:
+            try:
+                limiter._check_request_limit(request, None, in_middleware=True)
+            except RateLimitExceeded as exc:
+                return await _rate_limit_handler(request, exc)
+        return await call_next(request)
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -65,7 +83,7 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 
 
 # Middleware (outermost first): correlation id → CORS → rate limiting.
-app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
