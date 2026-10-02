@@ -44,7 +44,17 @@ export interface CatalogQuery {
   offset?: number;
 }
 
-const API = "/api";
+// API base URL. Defaults to "/api" (same-origin, proxied to the backend by the Vite dev server
+// or nginx). For static hosting, set VITE_API_BASE to the backend's public URL at build time;
+// a bare hostname is upgraded to https and a trailing slash is stripped.
+function resolveApiBase(): string {
+  const raw = import.meta.env.VITE_API_BASE?.trim();
+  if (!raw) return "/api";
+  const base = raw.startsWith("http://") || raw.startsWith("https://") ? raw : `https://${raw}`;
+  return base.replace(/\/$/, "");
+}
+
+const API = resolveApiBase();
 
 async function getJSON<T>(url: string): Promise<T> {
   const resp = await fetch(`${API}${url}`);
